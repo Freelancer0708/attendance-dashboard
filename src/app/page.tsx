@@ -4,14 +4,23 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import { User } from '@supabase/supabase-js'
+
+type DailyReport = {
+  date: string
+  task_summary: string | null
+  hours_worked: number | null
+  notes: string | null
+}
+
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [reportSubmitted, setReportSubmitted] = useState(false)
   const [editingDate, setEditingDate] = useState<Date | null>(new Date())
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [history, setHistory] = useState<any[]>([])
+  const [history, setHistory] = useState<DailyReport[]>([])
 
   const [taskSummary, setTaskSummary] = useState('')
   const [hoursWorked, setHoursWorked] = useState(0)
@@ -141,7 +150,7 @@ export default function Home() {
     setEditingDate(new Date())
   }
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: DailyReport) => {
     setEditingDate(new Date(item.date))
     setTaskSummary(item.task_summary ?? '')
     setHoursWorked(item.hours_worked ?? 0)
@@ -244,7 +253,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {filteredHistory.map((item, idx) => (
+              {filteredHistory.map((item: DailyReport, idx: number) => (
                 <tr key={idx}>
                   <td className="p-2 border">{item.date}</td>
                   <td className="p-2 border">{item.task_summary ?? '-'}</td>
