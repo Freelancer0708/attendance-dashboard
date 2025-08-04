@@ -13,7 +13,6 @@ type DailyReport = {
   notes: string | null
 }
 
-
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,14 +43,14 @@ export default function Home() {
         .select('*')
         .eq('user_id', user.id)
 
-      const merged = reportsData?.map((r: any) => ({
+      const merged = reportsData?.map((r) => ({
         date: r.date,
         task_summary: r.task_summary,
         hours_worked: r.hours_worked,
         notes: r.notes,
       }))
 
-      setHistory(merged?.sort((a: any, b: any) => (a.date < b.date ? 1 : -1)) ?? [])
+      setHistory(merged?.sort((a, b) => (a.date < b.date ? 1 : -1)) ?? [])
     }
 
     fetchReports()

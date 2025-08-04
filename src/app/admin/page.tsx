@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
 
 type Attendance = {
   user_email: string
@@ -10,9 +11,10 @@ type Attendance = {
   task_summary: string | null
   hours_worked: number | null
 }
+const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [records, setRecords] = useState<Attendance[]>([])
 
@@ -21,8 +23,8 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
 
-      // 管理者チェック（仮にadmin@example.comだけ許可）
-      if (session?.user?.email !== 'admin@example.com') {
+      // 管理者チェック（仮にadminEmailだけ許可）
+      if (session?.user?.email !== adminEmail) {
         alert('管理者のみアクセス可能です')
         window.location.href = '/'
         return
