@@ -1,103 +1,271 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [reportSubmitted, setReportSubmitted] = useState(false)
+  const [editingDate, setEditingDate] = useState<Date | null>(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [history, setHistory] = useState<any[]>([])
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const [taskSummary, setTaskSummary] = useState('')
+  const [hoursWorked, setHoursWorked] = useState(0)
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setLoading(false)
+    }
+    getSession()
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+
+    const fetchReports = async () => {
+      const { data: reportsData } = await supabase
+        .from('daily_reports')
+        .select('*')
+        .eq('user_id', user.id)
+
+      const merged = reportsData?.map((r: any) => ({
+        date: r.date,
+        task_summary: r.task_summary,
+        hours_worked: r.hours_worked,
+        notes: r.notes,
+      }))
+
+      setHistory(merged?.sort((a: any, b: any) => (a.date < b.date ? 1 : -1)) ?? [])
+    }
+
+    fetchReports()
+  }, [user, reportSubmitted])
+
+  const handlePrevMonth = () => {
+    const prev = new Date(currentMonth)
+    prev.setMonth(prev.getMonth() - 1)
+    setCurrentMonth(prev)
+  }
+
+  const handleNextMonth = () => {
+    const next = new Date(currentMonth)
+    next.setMonth(next.getMonth() + 1)
+    setCurrentMonth(next)
+  }
+
+  const handleDeleteReport = async () => {
+    const dateStr = editingDate?.toISOString().slice(0, 10)
+    if (!dateStr || !user) return
+  
+    const { data: existing } = await supabase
+      .from('daily_reports')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('date', dateStr)
+      .maybeSingle()
+  
+    if (existing) {
+      const confirmDelete = confirm(`日報（${dateStr}）を削除しますか？`)
+      if (!confirmDelete) return
+  
+      await supabase.from('daily_reports').delete().eq('id', existing.id)
+  
+      setReportSubmitted(true)
+      setTaskSummary('')
+      setHoursWorked(0)
+      setNotes('')
+      setEditingDate(new Date())
+    }
+  }
+
+  const filteredHistory = history.filter((item) => {
+    const itemDate = new Date(item.date)
+    return (
+      itemDate.getFullYear() === currentMonth.getFullYear() &&
+      itemDate.getMonth() === currentMonth.getMonth()
+    )
+  })
+
+  const signInWithEmail = async () => {
+    const email = prompt("メールアドレスを入力してください")
+    if (email) {
+      await supabase.auth.signInWithOtp({ email })
+      alert('確認メールを送信しました')
+    }
+  }
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+  const handleSubmitReport = async () => {
+    const dateStr = editingDate?.toISOString().slice(0, 10)
+
+    const { data: existing } = await supabase
+      .from('daily_reports')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('date', dateStr)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase.from('daily_reports').update({
+        task_summary: taskSummary,
+        hours_worked: hoursWorked,
+        notes,
+      }).eq('id', existing.id)
+    } else {
+      await supabase.from('daily_reports').insert([
+        {
+          user_id: user.id,
+          date: dateStr,
+          task_summary: taskSummary,
+          hours_worked: hoursWorked,
+          notes,
+        }
+      ])
+    }
+
+    setReportSubmitted(true)
+    setTaskSummary('')
+    setHoursWorked(0)
+    setNotes('')
+    setEditingDate(new Date())
+  }
+
+  const handleEdit = (item: any) => {
+    setEditingDate(new Date(item.date))
+    setTaskSummary(item.task_summary ?? '')
+    setHoursWorked(item.hours_worked ?? 0)
+    setNotes(item.notes ?? '')
+    setReportSubmitted(false)
+  }
+
+  if (loading) return <p className="p-4">読み込み中...</p>
+
+  if (!user) return (
+    <div className="p-4">
+      <h1 className="text-xl mb-4">日報アプリ</h1>
+      <button onClick={signInWithEmail} className="bg-blue-600 text-white px-4 py-2 rounded">
+        メールでログイン
+      </button>
     </div>
-  );
+  )
+
+  return (
+    <main className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">こんにちは、{user.email}</h1>
+
+      {/* 日報入力フォーム */}
+      <div className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold">📋 日報入力・編集</h2>
+
+        <label className="block text-sm font-semibold">対象日付</label>
+        <DatePicker
+          selected={editingDate}
+          onChange={(date) => setEditingDate(date)}
+          className="border p-2 rounded w-full"
+          dateFormat="yyyy-MM-dd"
+        />
+
+        <input
+          type="text"
+          placeholder="作業概要"
+          value={taskSummary}
+          onChange={(e) => setTaskSummary(e.target.value)}
+          className="w-full border p-2 rounded"
+        />
+        <input
+          type="number"
+          placeholder="作業時間（時間）"
+          value={hoursWorked}
+          onChange={(e) => setHoursWorked(Number(e.target.value))}
+          className="w-full border p-2 rounded"
+        />
+        <textarea
+          placeholder="補足・メモ"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full border p-2 rounded"
+        />
+        <button
+          onClick={handleSubmitReport}
+          className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer"
+        >
+          日報を送信
+        </button>
+        {editingDate && (
+          <button
+            onClick={handleDeleteReport}
+            className="mt-2 text-red-600 underline text-sm mx-10 cursor-pointer"
+          >
+            🗑 この日報を削除
+          </button>
+        )}
+        {reportSubmitted && (
+          <p className="text-green-600 font-semibold">✅ 日報を保存しました</p>
+        )}
+      </div>
+
+      {/* 履歴表示 */}
+      <div className="mt-10">
+        <h2 className="text-lg font-bold mb-2">
+          🗂 {currentMonth.getFullYear()}年 {currentMonth.getMonth() + 1}月 の記録
+        </h2>
+
+        <div className="mb-4 flex gap-2">
+          <button onClick={handlePrevMonth} className="bg-gray-200 px-3 py-1 rounded text-black cursor-pointer">
+            ⬅ 前の月
+          </button>
+          <button onClick={handleNextMonth} className="bg-gray-200 px-3 py-1 rounded text-black cursor-pointer">
+            次の月 ➡
+          </button>
+        </div>
+
+        {filteredHistory.length === 0 ? (
+          <p className="text-sm text-gray-500">この月の記録はありません。</p>
+        ) : (
+          <table className="w-full text-sm border border-gray-300">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 border text-black">日付</th>
+                <th className="p-2 border text-black">作業概要</th>
+                <th className="p-2 border text-black">時間</th>
+                <th className="p-2 border text-black">メモ</th>
+                <th className="p-2 border text-black">編集</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHistory.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="p-2 border">{item.date}</td>
+                  <td className="p-2 border">{item.task_summary ?? '-'}</td>
+                  <td className="p-2 border">{item.hours_worked ?? '-'}</td>
+                  <td className="p-2 border">{item.notes ?? '-'}</td>
+                  <td className="p-2 border">
+                    <button
+                      className="text-blue-400 underline text-xs cursor-pointer"
+                      onClick={() => handleEdit(item)}
+                    >
+                      編集
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <button onClick={signOut} className="mt-6 text-sm text-gray-500 underline">ログアウト</button>
+    </main>
+  )
 }
