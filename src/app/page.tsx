@@ -76,7 +76,7 @@ export default function Home() {
     const { data: existing } = await supabase
       .from('daily_reports')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .eq('date', dateStr)
       .maybeSingle()
   
@@ -121,7 +121,7 @@ export default function Home() {
     const { data: existing } = await supabase
       .from('daily_reports')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .eq('date', dateStr)
       .maybeSingle()
 
@@ -134,7 +134,7 @@ export default function Home() {
     } else {
       await supabase.from('daily_reports').insert([
         {
-          user_id: user.id,
+          user_id: user!.id,
           date: dateStr,
           task_summary: taskSummary,
           hours_worked: hoursWorked,
