@@ -21,13 +21,17 @@ const notifySlack = async (userEmail: string, date: string) => {
     return;
   }
 
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text: `📝 日報が提出されました！\nユーザー: ${userEmail}\n日付: ${date}`,
-    }),
-  });
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `📝 日報が提出されました！\nユーザー: ${userEmail}\n日付: ${date}`,
+      }),
+    });
+  } catch (err) {
+    console.error("Slack通知エラー:", err)
+  }
 };
 
 
