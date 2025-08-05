@@ -13,6 +13,24 @@ type DailyReport = {
   notes: string | null
 }
 
+const notifySlack = async (userEmail: string, date: string) => {
+  const webhookUrl = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.warn("Slack Webhook URL が設定されていません");
+    return;
+  }
+
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: `📝 日報が提出されました！\nユーザー: ${userEmail}\n日付: ${date}`,
+    }),
+  });
+};
+
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -141,6 +159,10 @@ export default function Home() {
         }
       ])
     }
+
+    // ✅ Slack通知ここで実行！
+    if (!user?.email || !dateStr) return
+    await notifySlack(user.email, dateStr)
 
     setReportSubmitted(true)
     setTaskSummary('')
